@@ -1287,6 +1287,7 @@ router.post('/api-keys', authenticateAdmin, async (req, res) => {
       rateLimitWindow,
       rateLimitRequests,
       rateLimitCost,
+      rateMultiplier, // 新增：费率倍数
       enableModelRestriction,
       restrictedModels,
       enableClientRestriction,
@@ -1441,6 +1442,7 @@ router.post('/api-keys', authenticateAdmin, async (req, res) => {
       rateLimitWindow,
       rateLimitRequests,
       rateLimitCost,
+      rateMultiplier, // 新增：费率倍数
       enableModelRestriction,
       restrictedModels,
       enableClientRestriction,
@@ -1483,6 +1485,7 @@ router.post('/api-keys/batch', authenticateAdmin, async (req, res) => {
       rateLimitWindow,
       rateLimitRequests,
       rateLimitCost,
+      rateMultiplier, // 新增：费率倍数
       enableModelRestriction,
       restrictedModels,
       enableClientRestriction,
@@ -1541,6 +1544,7 @@ router.post('/api-keys/batch', authenticateAdmin, async (req, res) => {
           rateLimitWindow,
           rateLimitRequests,
           rateLimitCost,
+          rateMultiplier, // 新增：费率倍数
           enableModelRestriction,
           restrictedModels,
           enableClientRestriction,

@@ -140,6 +140,7 @@ class ApiKeyService {
       rateLimitWindow = null,
       rateLimitRequests = null,
       rateLimitCost = null, // 新增：速率限制费用字段
+      rateMultiplier = null, // 新增：费率倍数（null表示使用全局默认值）
       enableModelRestriction = false,
       restrictedModels = [],
       enableClientRestriction = false,
@@ -169,6 +170,7 @@ class ApiKeyService {
       rateLimitWindow: String(rateLimitWindow ?? 0),
       rateLimitRequests: String(rateLimitRequests ?? 0),
       rateLimitCost: String(rateLimitCost ?? 0), // 新增：速率限制费用字段
+      rateMultiplier: rateMultiplier !== null ? String(rateMultiplier) : '', // 新增：费率倍数
       isActive: String(isActive),
       claudeAccountId: claudeAccountId || '',
       claudeConsoleAccountId: claudeConsoleAccountId || '',
@@ -223,6 +225,7 @@ class ApiKeyService {
       rateLimitWindow: parseInt(keyData.rateLimitWindow || 0),
       rateLimitRequests: parseInt(keyData.rateLimitRequests || 0),
       rateLimitCost: parseFloat(keyData.rateLimitCost || 0), // 新增：速率限制费用字段
+      rateMultiplier: keyData.rateMultiplier ? parseFloat(keyData.rateMultiplier) : null, // 新增：费率倍数
       isActive: keyData.isActive === 'true',
       claudeAccountId: keyData.claudeAccountId,
       claudeConsoleAccountId: keyData.claudeConsoleAccountId,
@@ -719,6 +722,7 @@ class ApiKeyService {
         'rateLimitWindow',
         'rateLimitRequests',
         'rateLimitCost', // 新增：速率限制费用字段
+        'rateMultiplier', // 新增：费率倍数
         'isActive',
         'claudeAccountId',
         'claudeConsoleAccountId',
@@ -982,7 +986,8 @@ class ApiKeyService {
 
       // 获取费率倍数（优先使用 API Key 级别的，否则使用全局默认值）
       const keyData = await redis.getApiKey(keyId)
-      const rateMultiplier = keyData?.rateMultiplier || parseFloat(process.env.DEFAULT_RATE_MULTIPLIER || '1.0')
+      const rateMultiplier =
+        keyData?.rateMultiplier || parseFloat(process.env.DEFAULT_RATE_MULTIPLIER || '1.0')
 
       // 计算费用（应用费率倍数）
       const CostCalculator = require('../utils/costCalculator')
@@ -994,7 +999,7 @@ class ApiKeyService {
           cache_read_input_tokens: cacheReadTokens
         },
         model,
-        rateMultiplier  // 传递倍率参数
+        rateMultiplier // 传递倍率参数
       )
 
       // 检查是否为 1M 上下文请求
@@ -1058,7 +1063,8 @@ class ApiKeyService {
       }
 
       // 记录单次请求的使用详情（使用实际费用）
-      const usageCost = costInfo && costInfo.costs ? (costInfo.costs.actual || costInfo.costs.total || 0) : 0
+      const usageCost =
+        costInfo && costInfo.costs ? costInfo.costs.actual || costInfo.costs.total || 0 : 0
       await redis.addUsageRecord(keyId, {
         timestamp: new Date().toISOString(),
         model,
@@ -1069,7 +1075,7 @@ class ApiKeyService {
         cacheReadTokens,
         totalTokens,
         cost: Number(usageCost.toFixed(6)),
-        rateMultiplier,  // 记录使用的倍率
+        rateMultiplier, // 记录使用的倍率
         costBreakdown: costInfo && costInfo.costs ? costInfo.costs : undefined
       })
 

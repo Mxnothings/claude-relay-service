@@ -435,6 +435,56 @@
 
           <div>
             <label class="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300"
+              >费率倍数 (可选)</label
+            >
+            <div class="space-y-2">
+              <div class="flex gap-2">
+                <button
+                  class="rounded bg-gray-100 px-2 py-1 text-xs font-medium hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                  type="button"
+                  @click="form.rateMultiplier = '1.0'"
+                >
+                  1.0x
+                </button>
+                <button
+                  class="rounded bg-gray-100 px-2 py-1 text-xs font-medium hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                  type="button"
+                  @click="form.rateMultiplier = '1.5'"
+                >
+                  1.5x
+                </button>
+                <button
+                  class="rounded bg-gray-100 px-2 py-1 text-xs font-medium hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                  type="button"
+                  @click="form.rateMultiplier = '2.0'"
+                >
+                  2.0x
+                </button>
+                <button
+                  class="rounded bg-gray-100 px-2 py-1 text-xs font-medium hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                  type="button"
+                  @click="form.rateMultiplier = ''"
+                >
+                  自定义
+                </button>
+              </div>
+              <input
+                v-model="form.rateMultiplier"
+                class="form-input w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400"
+                min="0"
+                placeholder="留空使用全局默认值"
+                step="0.1"
+                type="number"
+              />
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                设置此 API Key 的费率倍数，用于调整计费金额。1.0 表示原价，1.5 表示加价 50%，0.8
+                表示打 8 折。留空则使用全局默认值（环境变量 DEFAULT_RATE_MULTIPLIER）
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <label class="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300"
               >并发限制 (可选)</label
             >
             <input
@@ -947,6 +997,7 @@ const form = reactive({
   rateLimitWindow: '',
   rateLimitRequests: '',
   rateLimitCost: '', // 新增：费用限制
+  rateMultiplier: '', // 新增：费率倍数
   concurrencyLimit: '',
   dailyCostLimit: '',
   totalCostLimit: '',
@@ -1357,6 +1408,10 @@ const createApiKey = async () => {
       rateLimitCost:
         form.rateLimitCost !== '' && form.rateLimitCost !== null
           ? parseFloat(form.rateLimitCost)
+          : null,
+      rateMultiplier:
+        form.rateMultiplier !== '' && form.rateMultiplier !== null
+          ? parseFloat(form.rateMultiplier)
           : null,
       concurrencyLimit:
         form.concurrencyLimit !== '' && form.concurrencyLimit !== null

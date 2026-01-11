@@ -384,6 +384,39 @@ class PricingService {
     }
   }
 
+  // 应用价格倍率（全局倍率配置）
+  applyPriceMultiplier(pricing) {
+    if (!pricing) {
+      return null
+    }
+
+    const multiplier = parseFloat(process.env.PRICE_MULTIPLIER || '1.0')
+
+    // 倍率为 1.0 时直接返回原价格，无需拷贝
+    if (multiplier === 1.0) {
+      return pricing
+    }
+
+    // 深拷贝价格对象，避免污染缓存数据
+    const adjustedPricing = { ...pricing }
+
+    // 应用倍率到所有价格字段
+    if (adjustedPricing.input_cost_per_token) {
+      adjustedPricing.input_cost_per_token *= multiplier
+    }
+    if (adjustedPricing.output_cost_per_token) {
+      adjustedPricing.output_cost_per_token *= multiplier
+    }
+    if (adjustedPricing.cache_creation_input_token_cost) {
+      adjustedPricing.cache_creation_input_token_cost *= multiplier
+    }
+    if (adjustedPricing.cache_read_input_token_cost) {
+      adjustedPricing.cache_read_input_token_cost *= multiplier
+    }
+
+    return adjustedPricing
+  }
+
   // 获取模型价格信息
   getModelPricing(modelName) {
     if (!this.pricingData || !modelName) {
@@ -393,7 +426,7 @@ class PricingService {
     // 尝试直接匹配
     if (this.pricingData[modelName]) {
       logger.debug(`💰 Found exact pricing match for ${modelName}`)
-      return this.pricingData[modelName]
+      return this.applyPriceMultiplier(this.pricingData[modelName])
     }
 
     // 特殊处理：gpt-5-codex 回退到 gpt-5
@@ -401,7 +434,7 @@ class PricingService {
       const fallbackPricing = this.pricingData['gpt-5']
       if (fallbackPricing) {
         logger.info(`💰 Using gpt-5 pricing as fallback for ${modelName}`)
-        return fallbackPricing
+        return this.applyPriceMultiplier(fallbackPricing)
       }
     }
 
@@ -414,7 +447,7 @@ class PricingService {
         logger.debug(
           `💰 Found pricing for ${modelName} by removing region prefix: ${withoutRegion}`
         )
-        return this.pricingData[withoutRegion]
+        return this.applyPriceMultiplier(this.pricingData[withoutRegion])
       }
     }
 
@@ -425,7 +458,7 @@ class PricingService {
       const normalizedKey = key.toLowerCase().replace(/[_-]/g, '')
       if (normalizedKey.includes(normalizedModel) || normalizedModel.includes(normalizedKey)) {
         logger.debug(`💰 Found pricing for ${modelName} using fuzzy match: ${key}`)
-        return value
+        return this.applyPriceMultiplier(value)
       }
     }
 
@@ -437,7 +470,7 @@ class PricingService {
       for (const [key, value] of Object.entries(this.pricingData)) {
         if (key.includes(coreModel) || key.replace('anthropic.', '').includes(coreModel)) {
           logger.debug(`💰 Found pricing for ${modelName} using Bedrock core model match: ${key}`)
-          return value
+          return this.applyPriceMultiplier(value)
         }
       }
     }

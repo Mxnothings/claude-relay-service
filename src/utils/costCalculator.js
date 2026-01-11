@@ -73,6 +73,28 @@ const MODEL_PRICING = {
 
 class CostCalculator {
   /**
+   * 应用价格倍率到静态价格（备用定价）
+   * @param {Object} pricing - 静态价格对象
+   * @returns {Object} 应用倍率后的价格对象
+   */
+  static applyStaticPriceMultiplier(pricing) {
+    const multiplier = parseFloat(process.env.PRICE_MULTIPLIER || '1.0')
+
+    // 倍率为 1.0 时直接返回原价格
+    if (multiplier === 1.0) {
+      return pricing
+    }
+
+    // 应用倍率到所有价格字段
+    return {
+      input: pricing.input * multiplier,
+      output: pricing.output * multiplier,
+      cacheWrite: pricing.cacheWrite * multiplier,
+      cacheRead: pricing.cacheRead * multiplier
+    }
+  }
+
+  /**
    * 计算单次请求的费用
    * @param {Object} usage - 使用量数据
    * @param {number} usage.input_tokens - 输入token数量
@@ -175,8 +197,9 @@ class CostCalculator {
       }
       usingDynamicPricing = true
     } else {
-      // 回退到静态价格
-      pricing = MODEL_PRICING[model] || MODEL_PRICING['unknown']
+      // 回退到静态价格（应用倍率）
+      const staticPricing = MODEL_PRICING[model] || MODEL_PRICING['unknown']
+      pricing = this.applyStaticPriceMultiplier(staticPricing)
     }
 
     // 计算各类型token的费用 (USD)
@@ -253,10 +276,11 @@ class CostCalculator {
       const gpt5Pricing = MODEL_PRICING['gpt-5']
       if (gpt5Pricing) {
         console.log(`Using gpt-5 pricing as fallback for ${model}`)
-        return gpt5Pricing
+        return this.applyStaticPriceMultiplier(gpt5Pricing)
       }
     }
-    return MODEL_PRICING[model] || MODEL_PRICING['unknown']
+    const staticPricing = MODEL_PRICING[model] || MODEL_PRICING['unknown']
+    return this.applyStaticPriceMultiplier(staticPricing)
   }
 
   /**

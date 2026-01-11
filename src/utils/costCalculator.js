@@ -80,21 +80,15 @@ class CostCalculator {
    * @param {number} usage.cache_creation_input_tokens - 缓存创建token数量
    * @param {number} usage.cache_read_input_tokens - 缓存读取token数量
    * @param {string} model - 模型名称
-   * @param {number} rateMultiplier - 费率倍数（可选，默认1.0）
    * @returns {Object} 费用详情
    */
-  static calculateCost(usage, model = 'unknown', rateMultiplier = 1.0) {
+  static calculateCost(usage, model = 'unknown') {
     // 如果 usage 包含详细的 cache_creation 对象或是 1M 模型，使用 pricingService 来处理
     if (
       (usage.cache_creation && typeof usage.cache_creation === 'object') ||
       (model && model.includes('[1m]'))
     ) {
       const result = pricingService.calculateCost(usage, model)
-
-      // 应用费率倍数
-      const effectiveMultiplier = typeof rateMultiplier === 'number' && rateMultiplier > 0 ? rateMultiplier : 1.0
-      const actualCost = result.totalCost * effectiveMultiplier
-
       // 转换 pricingService 返回的格式到 costCalculator 的格式
       return {
         model,
@@ -105,7 +99,6 @@ class CostCalculator {
           cacheRead: result.pricing.cacheRead * 1000000
         },
         usingDynamicPricing: true,
-        rateMultiplier: effectiveMultiplier,
         isLongContextRequest: result.isLongContextRequest || false,
         usage: {
           inputTokens: usage.input_tokens || 0,
@@ -123,16 +116,14 @@ class CostCalculator {
           output: result.outputCost,
           cacheWrite: result.cacheCreateCost,
           cacheRead: result.cacheReadCost,
-          total: result.totalCost,
-          actual: actualCost
+          total: result.totalCost
         },
         formatted: {
           input: this.formatCost(result.inputCost),
           output: this.formatCost(result.outputCost),
           cacheWrite: this.formatCost(result.cacheCreateCost),
           cacheRead: this.formatCost(result.cacheReadCost),
-          total: this.formatCost(result.totalCost),
-          actual: this.formatCost(actualCost)
+          total: this.formatCost(result.totalCost)
         },
         debug: {
           isOpenAIModel: model.includes('gpt') || model.includes('o1'),
@@ -196,15 +187,10 @@ class CostCalculator {
 
     const totalCost = inputCost + outputCost + cacheWriteCost + cacheReadCost
 
-    // 应用费率倍数
-    const effectiveMultiplier = typeof rateMultiplier === 'number' && rateMultiplier > 0 ? rateMultiplier : 1.0
-    const actualCost = totalCost * effectiveMultiplier
-
     return {
       model,
       pricing,
       usingDynamicPricing,
-      rateMultiplier: effectiveMultiplier,
       usage: {
         inputTokens,
         outputTokens,
@@ -217,8 +203,7 @@ class CostCalculator {
         output: outputCost,
         cacheWrite: cacheWriteCost,
         cacheRead: cacheReadCost,
-        total: totalCost,
-        actual: actualCost  // 应用倍率后的实际费用
+        total: totalCost
       },
       // 格式化的费用字符串
       formatted: {
@@ -226,8 +211,7 @@ class CostCalculator {
         output: this.formatCost(outputCost),
         cacheWrite: this.formatCost(cacheWriteCost),
         cacheRead: this.formatCost(cacheReadCost),
-        total: this.formatCost(totalCost),
-        actual: this.formatCost(actualCost)
+        total: this.formatCost(totalCost)
       },
       // 添加调试信息
       debug: {

@@ -980,11 +980,7 @@ class ApiKeyService {
     try {
       const totalTokens = inputTokens + outputTokens + cacheCreateTokens + cacheReadTokens
 
-      // 获取费率倍数（优先使用 API Key 级别的，否则使用全局默认值）
-      const keyData = await redis.getApiKey(keyId)
-      const rateMultiplier = keyData?.rateMultiplier || parseFloat(process.env.DEFAULT_RATE_MULTIPLIER || '1.0')
-
-      // 计算费用（应用费率倍数）
+      // 计算费用
       const CostCalculator = require('../utils/costCalculator')
       const costInfo = CostCalculator.calculateCost(
         {
@@ -993,8 +989,7 @@ class ApiKeyService {
           cache_creation_input_tokens: cacheCreateTokens,
           cache_read_input_tokens: cacheReadTokens
         },
-        model,
-        rateMultiplier  // 传递倍率参数
+        model
       )
 
       // 检查是否为 1M 上下文请求
@@ -1018,18 +1013,18 @@ class ApiKeyService {
         isLongContextRequest
       )
 
-      // 记录费用统计（使用应用倍率后的实际费用）
-      const actualCost = costInfo.costs.actual || costInfo.costs.total
-      if (actualCost > 0) {
-        await redis.incrementDailyCost(keyId, actualCost)
+      // 记录费用统计
+      if (costInfo.costs.total > 0) {
+        await redis.incrementDailyCost(keyId, costInfo.costs.total)
         logger.database(
-          `💰 Recorded cost for ${keyId}: $${actualCost.toFixed(6)} (multiplier: ${rateMultiplier}), model: ${model}`
+          `💰 Recorded cost for ${keyId}: $${costInfo.costs.total.toFixed(6)}, model: ${model}`
         )
       } else {
         logger.debug(`💰 No cost recorded for ${keyId} - zero cost for model: ${model}`)
       }
 
       // 获取API Key数据以确定关联的账户
+      const keyData = await redis.getApiKey(keyId)
       if (keyData && Object.keys(keyData).length > 0) {
         // 更新最后使用时间
         keyData.lastUsedAt = new Date().toISOString()
@@ -1057,8 +1052,8 @@ class ApiKeyService {
         }
       }
 
-      // 记录单次请求的使用详情（使用实际费用）
-      const usageCost = costInfo && costInfo.costs ? (costInfo.costs.actual || costInfo.costs.total || 0) : 0
+      // 记录单次请求的使用详情
+      const usageCost = costInfo && costInfo.costs ? costInfo.costs.total || 0 : 0
       await redis.addUsageRecord(keyId, {
         timestamp: new Date().toISOString(),
         model,
@@ -1069,7 +1064,6 @@ class ApiKeyService {
         cacheReadTokens,
         totalTokens,
         cost: Number(usageCost.toFixed(6)),
-        rateMultiplier,  // 记录使用的倍率
         costBreakdown: costInfo && costInfo.costs ? costInfo.costs : undefined
       })
 
